@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from dotenv import load_dotenv
-from anthropic import AnthropicBedrock
+from anthropic import Anthropic
 import mcp.types as types
 
 # Load environment variables
@@ -71,8 +71,8 @@ def check_tool_call(response):
 
 async def main():
     client = SSE_MCP_Client()
-    chat = AnthropicBedrock()
-    model_name = os.getenv("BEDROCK_MODEL_NAME")
+    chat = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    model_name = os.getenv("ANTHROPIC_MODEL_NAME", "claude-sonnet-4-20250514")
     print(f"Using model: {model_name}")
     
     try:

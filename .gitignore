@@ -1,6 +1,7 @@
 # Credentials and environment
 .env
 credentials.json
+token.json
 uv.lock
 
 # Virtual environments
