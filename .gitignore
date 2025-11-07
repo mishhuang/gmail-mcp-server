@@ -1,0 +1,26 @@
+# Credentials and environment
+.env
+credentials.json
+uv.lock
+
+# Virtual environments
+.venv/
+venv/
+
+# Python build artifacts
+__pycache__/
+*.py[oc]
+*.egg-info
+build/
+dist/
+wheels/
+
+# Input data files
+*.csv
+*.docx
+*.json
+*.pdf
+*.pptx
+*.xls
+*.xlsx
+
