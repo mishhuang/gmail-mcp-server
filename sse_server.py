@@ -202,6 +202,124 @@ def search_emails(sender: str, after_date: str = "", max_results: int = 10) -> s
         })
 
 
+@mcp.tool()
+def send_email(to: str, subject: str, body: str, is_html: bool = False) -> str:
+    """
+    Send an email via Gmail.
+    
+    Args:
+        to: Recipient email address (e.g., "recipient@example.com")
+        subject: Email subject line
+        body: Email body content
+        is_html: Whether body is HTML format (default: False for plain text)
+    
+    Returns:
+        str: JSON string with confirmation and message ID
+    
+    Examples:
+        - send_email(to="friend@example.com", subject="Hello", body="Hi there!")
+        - send_email(to="colleague@company.com", subject="Report", body="<h1>Report</h1>", is_html=True)
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Send email
+        result = gmail_client.send_email(
+            to=to,
+            subject=subject,
+            body=body,
+            is_html=is_html
+        )
+        
+        if not result:
+            return json.dumps({
+                "error": "Failed to send email. Check recipient address and try again."
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Email sent successfully",
+            "message_id": result.get('id'),
+            "thread_id": result.get('threadId'),
+            "to": to,
+            "subject": subject
+        }, indent=2)
+        
+    except ValueError as e:
+        return json.dumps({
+            "error": f"Invalid input: {str(e)}"
+        })
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to send email: {str(e)}"
+        })
+
+
+@mcp.tool()
+def reply_to_email(message_id: str, body: str, is_html: bool = False) -> str:
+    """
+    Reply to an existing email message.
+    
+    Args:
+        message_id: ID of the email to reply to (obtained from list_emails or read_email)
+        body: Reply message content
+        is_html: Whether body is HTML format (default: False for plain text)
+    
+    Returns:
+        str: JSON string with confirmation and reply message ID
+    
+    Examples:
+        - reply_to_email(message_id="18f2a3b4c5d6e7f8", body="Thanks for your email!")
+        - reply_to_email(message_id="18f2a3b4c5d6e7f8", body="<p>Got it!</p>", is_html=True)
+    
+    Notes:
+        - Automatically adds "Re: " to subject if not already present
+        - Sets proper In-Reply-To and References headers for threading
+        - Replies to the original sender
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Send reply
+        result = gmail_client.reply_to_email(
+            message_id=message_id,
+            body=body,
+            is_html=is_html
+        )
+        
+        if not result:
+            return json.dumps({
+                "error": f"Failed to send reply. Check message ID: {message_id}"
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Reply sent successfully",
+            "message_id": result.get('id'),
+            "thread_id": result.get('threadId'),
+            "in_reply_to": message_id
+        }, indent=2)
+        
+    except ValueError as e:
+        return json.dumps({
+            "error": f"Invalid input: {str(e)}"
+        })
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to send reply: {str(e)}"
+        })
+
+
 # Start MCP server with SSE transport
 if __name__ == "__main__":
     print(f"Starting {SERVER_NAME} on port {SSE_PORT}...")

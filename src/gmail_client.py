@@ -1,11 +1,169 @@
 """Gmail API client for interacting with Gmail services."""
 
 import base64
+import re
 from typing import Optional, List, Dict, Any, Tuple
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from email.utils import parsedate_to_datetime
 from googleapiclient.discovery import Resource
+from googleapiclient.errors import HttpError
 
 from .auth import build_gmail_service
+
+
+def validate_email(email: str) -> bool:
+    """
+    Validate email address format using regex.
+    
+    Args:
+        email: Email address to validate
+        
+    Returns:
+        bool: True if valid email format, False otherwise
+        
+    Raises:
+        ValueError: If email format is invalid
+    """
+    # Basic email regex pattern
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    
+    if not email or not isinstance(email, str):
+        raise ValueError(f"Invalid email: empty or not a string")
+    
+    if not re.match(pattern, email.strip()):
+        raise ValueError(f"Invalid email format: {email}")
+    
+    return True
+
+
+def encode_message(message: MIMEText) -> str:
+    """
+    Base64 URL-safe encode a MIME message for Gmail API.
+    
+    Args:
+        message: MIME message object
+        
+    Returns:
+        str: Base64 URL-safe encoded message string
+    """
+    raw_message = message.as_bytes()
+    encoded = base64.urlsafe_b64encode(raw_message).decode('utf-8')
+    return encoded
+
+
+def create_message(
+    to: str,
+    subject: str,
+    body: str,
+    is_html: bool = False,
+    from_email: Optional[str] = None
+) -> Dict[str, str]:
+    """
+    Create a MIME email message.
+    
+    Args:
+        to: Recipient email address
+        subject: Email subject
+        body: Email body content
+        is_html: Whether body is HTML (default: False for plain text)
+        from_email: Sender email (optional, defaults to authenticated user)
+        
+    Returns:
+        Dict with 'raw' key containing base64url-encoded message
+        
+    Raises:
+        ValueError: If recipient email is invalid
+    """
+    # Validate recipient email
+    validate_email(to)
+    
+    # Create message
+    if is_html:
+        message = MIMEMultipart('alternative')
+        text_part = MIMEText(body, 'html')
+        message.attach(text_part)
+    else:
+        message = MIMEText(body, 'plain')
+    
+    message['to'] = to
+    message['subject'] = subject
+    
+    if from_email:
+        validate_email(from_email)
+        message['from'] = from_email
+    
+    # Encode and return
+    encoded = encode_message(message)
+    return {'raw': encoded}
+
+
+def create_reply_message(
+    original_message: Dict[str, Any],
+    body: str,
+    is_html: bool = False
+) -> Dict[str, str]:
+    """
+    Create a reply message with proper threading headers.
+    
+    Args:
+        original_message: Original message dict from Gmail API
+        body: Reply body content
+        is_html: Whether body is HTML (default: False)
+        
+    Returns:
+        Dict with 'raw' and 'threadId' for sending via Gmail API
+        
+    Raises:
+        ValueError: If original message is missing required headers
+    """
+    # Extract headers from original message
+    headers = {h['name'].lower(): h['value'] 
+               for h in original_message.get('payload', {}).get('headers', [])}
+    
+    original_from = headers.get('from', '')
+    original_subject = headers.get('subject', '')
+    original_message_id = headers.get('message-id', '')
+    thread_id = original_message.get('threadId', '')
+    
+    if not original_from:
+        raise ValueError("Original message missing 'From' header")
+    
+    # Extract email from "Name <email@domain.com>" format
+    email_match = re.search(r'<(.+?)>', original_from)
+    reply_to = email_match.group(1) if email_match else original_from
+    
+    # Validate recipient
+    validate_email(reply_to)
+    
+    # Prepend "Re: " to subject if not already present
+    reply_subject = original_subject
+    if not reply_subject.lower().startswith('re:'):
+        reply_subject = f"Re: {original_subject}"
+    
+    # Create reply message
+    if is_html:
+        message = MIMEMultipart('alternative')
+        text_part = MIMEText(body, 'html')
+        message.attach(text_part)
+    else:
+        message = MIMEText(body, 'plain')
+    
+    message['to'] = reply_to
+    message['subject'] = reply_subject
+    
+    # Set threading headers
+    if original_message_id:
+        message['In-Reply-To'] = original_message_id
+        message['References'] = original_message_id
+    
+    # Encode message
+    encoded = encode_message(message)
+    
+    return {
+        'raw': encoded,
+        'threadId': thread_id
+    }
 
 
 def decode_base64_data(data: str) -> str:
@@ -331,24 +489,108 @@ class GmailClient:
         
         return self.get_email_summaries(query=query, max_results=max_results)
     
-    # Placeholder methods for future implementation
-    
-    def send_message(self, to: str, subject: str, body: str) -> bool:
+    def send_email(
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        is_html: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """
-        Send an email message.
+        Send an email message via Gmail.
         
         Args:
             to: Recipient email address
             subject: Email subject
             body: Email body content
+            is_html: Whether body is HTML (default: False for plain text)
         
         Returns:
-            bool: True if sent successfully, False otherwise.
-            
-        Note:
-            This is a placeholder. Full implementation coming soon.
+            Optional[Dict[str, Any]]: Sent message details including message ID,
+                                     or None if sending fails
+        
+        Raises:
+            ValueError: If recipient email is invalid
+            RuntimeError: If client not authenticated
         """
-        raise NotImplementedError("send_message will be implemented in future updates")
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            # Create message
+            message = create_message(to=to, subject=subject, body=body, is_html=is_html)
+            
+            # Send via Gmail API
+            sent_message = self.service.users().messages().send(
+                userId='me',
+                body=message
+            ).execute()
+            
+            return sent_message
+            
+        except HttpError as e:
+            print(f"Gmail API error sending message: {e}")
+            return None
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            return None
+    
+    def reply_to_email(
+        self,
+        message_id: str,
+        body: str,
+        is_html: bool = False
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Reply to an existing email message.
+        
+        Args:
+            message_id: ID of the message to reply to
+            body: Reply body content
+            is_html: Whether body is HTML (default: False)
+        
+        Returns:
+            Optional[Dict[str, Any]]: Sent reply details including message ID,
+                                     or None if reply fails
+        
+        Raises:
+            RuntimeError: If client not authenticated
+            ValueError: If original message cannot be found or is invalid
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            # Fetch original message
+            original = self.get_message(message_id)
+            if not original:
+                raise ValueError(f"Could not fetch original message: {message_id}")
+            
+            # Create reply message
+            reply_message = create_reply_message(
+                original_message=original,
+                body=body,
+                is_html=is_html
+            )
+            
+            # Send reply via Gmail API
+            sent_reply = self.service.users().messages().send(
+                userId='me',
+                body=reply_message
+            ).execute()
+            
+            return sent_reply
+            
+        except HttpError as e:
+            print(f"Gmail API error sending reply: {e}")
+            return None
+        except ValueError:
+            raise
+        except Exception as e:
+            print(f"Error sending reply: {e}")
+            return None
+    
+    # Placeholder methods for future implementation
     
     def list_labels(self) -> Optional[List[Dict[str, Any]]]:
         """
