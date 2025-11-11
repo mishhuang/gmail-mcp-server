@@ -9,6 +9,9 @@ google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
 google-api-python-client>=2.147.0
 
+# HTML parsing for newsletter content
+beautifulsoup4>=4.12.0
+
 # Client dependencies (for testing with Anthropic API)
 anthropic==0.42.0
 

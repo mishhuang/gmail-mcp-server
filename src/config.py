@@ -28,3 +28,6 @@ OAUTH_REDIRECT_URI = f"http://localhost:{OAUTH_PORT}/"
 SERVER_NAME = "gmail-mcp-server"
 SSE_PORT = int(os.getenv("SSE_PORT", "5553"))
 
+# Newsletter configuration
+DEFAULT_NEWSLETTER_HOURS = 36
+

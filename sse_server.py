@@ -8,8 +8,9 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
-from src.config import SERVER_NAME, SSE_PORT
+from src.config import SERVER_NAME, SSE_PORT, DEFAULT_NEWSLETTER_HOURS
 from src.gmail_client import GmailClient
+from src.newsletter import fetch_newsletters as fetch_newsletters_func, get_sender_name
 
 # Load environment variables
 load_dotenv()
@@ -317,6 +318,92 @@ def reply_to_email(message_id: str, body: str, is_html: bool = False) -> str:
     except Exception as e:
         return json.dumps({
             "error": f"Failed to send reply: {str(e)}"
+        })
+
+
+@mcp.tool()
+def fetch_newsletters(hours_back: int = 36, sender_emails: str = "") -> str:
+    """
+    Fetch and organize newsletter emails from the past N hours.
+    
+    This tool aggregates emails from AI/tech newsletters for easy summarization.
+    Default newsletters include: Ben's Bites, The Neuron, The Rundown AI, 
+    Last Week in AI, and Alpha Signal.
+    
+    Args:
+        hours_back: How many hours back to search (default: 36)
+        sender_emails: Comma-separated email addresses to override defaults (optional)
+                      Example: "sender1@example.com,sender2@example.com"
+    
+    Returns:
+        str: JSON string with structure:
+        {
+            "date_range": "YYYY-MM-DD to YYYY-MM-DD",
+            "hours_back": int,
+            "total_emails": int,
+            "newsletters_by_sender": {
+                "sender@example.com": [
+                    {
+                        "id": "message_id",
+                        "subject": "subject line",
+                        "date": "date string",
+                        "content": "cleaned email content"
+                    }
+                ]
+            }
+        }
+    
+    Examples:
+        - fetch_newsletters() - Get default newsletters from past 36 hours
+        - fetch_newsletters(hours_back=24) - Get newsletters from past 24 hours
+        - fetch_newsletters(sender_emails="custom@newsletter.com") - Custom sender
+    
+    Usage Tips:
+        - Use the returned content with an LLM to generate daily summaries
+        - Adjust hours_back to match your reading schedule (24h, 48h, etc.)
+        - Content is pre-cleaned with headers/footers removed
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Parse custom senders if provided
+        custom_senders = None
+        if sender_emails.strip():
+            custom_senders = [s.strip() for s in sender_emails.split(',') if s.strip()]
+        
+        # Fetch newsletters
+        result = fetch_newsletters_func(
+            service=gmail_client.service,
+            hours_back=hours_back,
+            senders=custom_senders
+        )
+        
+        if result['total_emails'] == 0:
+            return json.dumps({
+                "message": f"No newsletters found in the past {hours_back} hours",
+                "date_range": result['date_range'],
+                "hours_back": hours_back,
+                "total_emails": 0
+            })
+        
+        # Add friendly names for senders
+        newsletters_with_names = {}
+        for sender, emails in result['newsletters_by_sender'].items():
+            friendly_name = get_sender_name(sender)
+            newsletters_with_names[f"{friendly_name} ({sender})"] = emails
+        
+        result['newsletters_by_sender'] = newsletters_with_names
+        
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to fetch newsletters: {str(e)}"
         })
 
 
