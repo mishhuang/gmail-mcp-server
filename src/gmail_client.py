@@ -590,6 +590,477 @@ class GmailClient:
             print(f"Error sending reply: {e}")
             return None
     
+    def mark_as_read(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Mark an email as read by removing the UNREAD label.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if operation fails
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['UNREAD']}
+            ).execute()
+            
+            return result
+            
+        except HttpError as e:
+            print(f"Gmail API error marking as read: {e}")
+            return None
+        except Exception as e:
+            print(f"Error marking message as read: {e}")
+            return None
+    
+    def mark_as_unread(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Mark an email as unread by adding the UNREAD label.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if operation fails
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'addLabelIds': ['UNREAD']}
+            ).execute()
+            
+            return result
+            
+        except HttpError as e:
+            print(f"Gmail API error marking as unread: {e}")
+            return None
+        except Exception as e:
+            print(f"Error marking message as unread: {e}")
+            return None
+    
+    def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Archive an email by removing it from the INBOX.
+        
+        Note: Archiving removes the INBOX label but keeps the email in "All Mail".
+        The email can still be found via search and labels.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if operation fails
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['INBOX']}
+            ).execute()
+            
+            return result
+            
+        except HttpError as e:
+            print(f"Gmail API error archiving email: {e}")
+            return None
+        except Exception as e:
+            print(f"Error archiving email: {e}")
+            return None
+    
+    def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Delete an email by moving it to trash.
+        
+        Note: This moves the email to Trash. It will be permanently deleted after 30 days.
+        Use trash() instead of delete() to allow recovery.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Response from trash operation, or None if operation fails
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            # Use trash() instead of delete() to allow recovery
+            result = self.service.users().messages().trash(
+                userId='me',
+                id=message_id
+            ).execute()
+            
+            return result
+            
+        except HttpError as e:
+            print(f"Gmail API error deleting email: {e}")
+            return None
+        except Exception as e:
+            print(f"Error deleting email: {e}")
+            return None
+    
+    def modify_labels(
+        self,
+        message_id: str,
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Modify labels on an email message.
+        
+        Args:
+            message_id: Gmail message ID
+            add_labels: List of label IDs to add (e.g., ['INBOX', 'UNREAD'])
+            remove_labels: List of label IDs to remove (e.g., ['SPAM'])
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if operation fails
+            
+        Raises:
+            RuntimeError: If client not authenticated
+            ValueError: If both add_labels and remove_labels are empty
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        if not add_labels and not remove_labels:
+            raise ValueError("Must specify at least one label to add or remove")
+        
+        try:
+            body = {}
+            if add_labels:
+                body['addLabelIds'] = add_labels
+            if remove_labels:
+                body['removeLabelIds'] = remove_labels
+            
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body=body
+            ).execute()
+            
+            return result
+            
+        except HttpError as e:
+            print(f"Gmail API error modifying labels: {e}")
+            return None
+        except Exception as e:
+            print(f"Error modifying labels: {e}")
+            return None
+    
+    def batch_modify_emails(
+        self,
+        message_ids: List[str],
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Modify labels on multiple emails in batch.
+        
+        Args:
+            message_ids: List of Gmail message IDs
+            add_labels: List of label IDs to add
+            remove_labels: List of label IDs to remove
+            
+        Returns:
+            Dict with success/failure counts and details:
+            {
+                'total': int,
+                'succeeded': int,
+                'failed': int,
+                'results': [{'id': str, 'success': bool, 'error': str}]
+            }
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        results = []
+        succeeded = 0
+        failed = 0
+        
+        for message_id in message_ids:
+            try:
+                result = self.modify_labels(
+                    message_id=message_id,
+                    add_labels=add_labels,
+                    remove_labels=remove_labels
+                )
+                
+                if result:
+                    succeeded += 1
+                    results.append({
+                        'id': message_id,
+                        'success': True
+                    })
+                else:
+                    failed += 1
+                    results.append({
+                        'id': message_id,
+                        'success': False,
+                        'error': 'Operation returned no result'
+                    })
+                    
+            except Exception as e:
+                failed += 1
+                results.append({
+                    'id': message_id,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        return {
+            'total': len(message_ids),
+            'succeeded': succeeded,
+            'failed': failed,
+            'results': results
+        }
+    
+    def mark_as_read(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Mark an email as read by removing the UNREAD label.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if error
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['UNREAD']}
+            ).execute()
+            return result
+        except HttpError as e:
+            print(f"Gmail API error marking as read: {e}")
+            return None
+        except Exception as e:
+            print(f"Error marking message as read: {e}")
+            return None
+    
+    def mark_as_unread(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Mark an email as unread by adding the UNREAD label.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if error
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'addLabelIds': ['UNREAD']}
+            ).execute()
+            return result
+        except HttpError as e:
+            print(f"Gmail API error marking as unread: {e}")
+            return None
+        except Exception as e:
+            print(f"Error marking message as unread: {e}")
+            return None
+    
+    def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Archive an email by removing the INBOX label.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if error
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['INBOX']}
+            ).execute()
+            return result
+        except HttpError as e:
+            print(f"Gmail API error archiving email: {e}")
+            return None
+        except Exception as e:
+            print(f"Error archiving email: {e}")
+            return None
+    
+    def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Delete an email by moving it to trash.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: Response from trash operation, or None if error
+            
+        Raises:
+            RuntimeError: If client not authenticated
+            
+        Note:
+            This moves the email to trash. To permanently delete, use the trash().delete() method.
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        try:
+            result = self.service.users().messages().trash(
+                userId='me',
+                id=message_id
+            ).execute()
+            return result
+        except HttpError as e:
+            print(f"Gmail API error deleting email: {e}")
+            return None
+        except Exception as e:
+            print(f"Error deleting email: {e}")
+            return None
+    
+    def modify_labels(
+        self,
+        message_id: str,
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Modify labels on an email message.
+        
+        Args:
+            message_id: Gmail message ID
+            add_labels: List of label IDs to add (e.g., ['STARRED', 'IMPORTANT'])
+            remove_labels: List of label IDs to remove
+            
+        Returns:
+            Optional[Dict[str, Any]]: Modified message details, or None if error
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        if not add_labels and not remove_labels:
+            return None
+        
+        try:
+            body = {}
+            if add_labels:
+                body['addLabelIds'] = add_labels
+            if remove_labels:
+                body['removeLabelIds'] = remove_labels
+            
+            result = self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body=body
+            ).execute()
+            return result
+        except HttpError as e:
+            print(f"Gmail API error modifying labels: {e}")
+            return None
+        except Exception as e:
+            print(f"Error modifying labels: {e}")
+            return None
+    
+    def batch_modify_emails(
+        self,
+        message_ids: List[str],
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Batch modify labels on multiple emails.
+        
+        Args:
+            message_ids: List of Gmail message IDs
+            add_labels: List of label IDs to add
+            remove_labels: List of label IDs to remove
+            
+        Returns:
+            Dict with success count and any errors:
+            {
+                'total': int,
+                'success': int,
+                'failed': int,
+                'errors': List[str]
+            }
+            
+        Raises:
+            RuntimeError: If client not authenticated
+        """
+        if not self.service:
+            raise RuntimeError("Client not authenticated. Call authenticate() first.")
+        
+        results = {
+            'total': len(message_ids),
+            'success': 0,
+            'failed': 0,
+            'errors': []
+        }
+        
+        for msg_id in message_ids:
+            try:
+                result = self.modify_labels(msg_id, add_labels, remove_labels)
+                if result:
+                    results['success'] += 1
+                else:
+                    results['failed'] += 1
+                    results['errors'].append(f"Failed to modify {msg_id}")
+            except Exception as e:
+                results['failed'] += 1
+                results['errors'].append(f"Error on {msg_id}: {str(e)}")
+        
+        return results
+    
     # Placeholder methods for future implementation
     
     def list_labels(self) -> Optional[List[Dict[str, Any]]]:

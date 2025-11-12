@@ -407,6 +407,187 @@ def fetch_newsletters(hours_back: int = 36, sender_emails: str = "") -> str:
         })
 
 
+@mcp.tool()
+def mark_email_read(message_id: str) -> str:
+    """
+    Mark an email as read.
+    
+    Args:
+        message_id: Gmail message ID (obtained from list_emails or read_email)
+    
+    Returns:
+        str: JSON string with success confirmation
+    
+    Example:
+        - mark_email_read(message_id="18f2a3b4c5d6e7f8")
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Mark as read
+        result = gmail_client.mark_as_read(message_id)
+        
+        if not result:
+            return json.dumps({
+                "error": f"Failed to mark email as read. Check message ID: {message_id}"
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Email marked as read",
+            "message_id": message_id,
+            "action": "mark_read"
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to mark email as read: {str(e)}"
+        })
+
+
+@mcp.tool()
+def mark_email_unread(message_id: str) -> str:
+    """
+    Mark an email as unread.
+    
+    Args:
+        message_id: Gmail message ID (obtained from list_emails or read_email)
+    
+    Returns:
+        str: JSON string with success confirmation
+    
+    Example:
+        - mark_email_unread(message_id="18f2a3b4c5d6e7f8")
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Mark as unread
+        result = gmail_client.mark_as_unread(message_id)
+        
+        if not result:
+            return json.dumps({
+                "error": f"Failed to mark email as unread. Check message ID: {message_id}"
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Email marked as unread",
+            "message_id": message_id,
+            "action": "mark_unread"
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to mark email as unread: {str(e)}"
+        })
+
+
+@mcp.tool()
+def archive_email(message_id: str) -> str:
+    """
+    Archive an email by removing it from the inbox.
+    
+    Note: Archiving removes the email from your inbox but keeps it in "All Mail".
+    The email can still be found via search and other labels.
+    
+    Args:
+        message_id: Gmail message ID (obtained from list_emails or read_email)
+    
+    Returns:
+        str: JSON string with success confirmation
+    
+    Example:
+        - archive_email(message_id="18f2a3b4c5d6e7f8")
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Archive email
+        result = gmail_client.archive_email(message_id)
+        
+        if not result:
+            return json.dumps({
+                "error": f"Failed to archive email. Check message ID: {message_id}"
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Email archived (removed from inbox)",
+            "message_id": message_id,
+            "action": "archive"
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to archive email: {str(e)}"
+        })
+
+
+@mcp.tool()
+def delete_email(message_id: str) -> str:
+    """
+    Delete an email by moving it to trash.
+    
+    Note: The email will be moved to Trash and automatically deleted after 30 days.
+    You can recover it from Trash within that time period.
+    
+    Args:
+        message_id: Gmail message ID (obtained from list_emails or read_email)
+    
+    Returns:
+        str: JSON string with success confirmation
+    
+    Example:
+        - delete_email(message_id="18f2a3b4c5d6e7f8")
+    
+    Warning:
+        This moves the email to Trash. Use with caution.
+    """
+    try:
+        # Ensure authenticated
+        if not gmail_client.service:
+            if not gmail_client.authenticate():
+                return json.dumps({
+                    "error": "Authentication failed. Please run: python authenticate.py"
+                })
+        
+        # Delete email (move to trash)
+        result = gmail_client.delete_email(message_id)
+        
+        if not result:
+            return json.dumps({
+                "error": f"Failed to delete email. Check message ID: {message_id}"
+            })
+        
+        return json.dumps({
+            "success": True,
+            "message": "Email moved to trash (recoverable for 30 days)",
+            "message_id": message_id,
+            "action": "delete"
+        }, indent=2)
+        
+    except Exception as e:
+        return json.dumps({
+            "error": f"Failed to delete email: {str(e)}"
+        })
+
+
 # Start MCP server with SSE transport
 if __name__ == "__main__":
     print(f"Starting {SERVER_NAME} on port {SSE_PORT}...")
