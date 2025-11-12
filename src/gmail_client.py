@@ -10,31 +10,8 @@ from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 
 from .auth import build_gmail_service
-
-
-def validate_email(email: str) -> bool:
-    """
-    Validate email address format using regex.
-    
-    Args:
-        email: Email address to validate
-        
-    Returns:
-        bool: True if valid email format, False otherwise
-        
-    Raises:
-        ValueError: If email format is invalid
-    """
-    # Basic email regex pattern
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    
-    if not email or not isinstance(email, str):
-        raise ValueError(f"Invalid email: empty or not a string")
-    
-    if not re.match(pattern, email.strip()):
-        raise ValueError(f"Invalid email format: {email}")
-    
-    return True
+from .validation import validate_email, validate_message_id
+from .exceptions import ValidationError, GmailAPIError
 
 
 def encode_message(message: MIMEText) -> str:

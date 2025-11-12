@@ -4,6 +4,7 @@ A FastMCP server for Gmail integration using the Gmail API.
 """
 
 import json
+import logging
 from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
@@ -11,6 +12,23 @@ from dotenv import load_dotenv
 from src.config import SERVER_NAME, SSE_PORT, DEFAULT_NEWSLETTER_HOURS
 from src.gmail_client import GmailClient
 from src.newsletter import fetch_newsletters as fetch_newsletters_func, get_sender_name
+from src.validation import (
+    validate_email, 
+    validate_message_id, 
+    validate_hours_back,
+    validate_max_results,
+    validate_subject,
+    validate_body,
+    sanitize_query
+)
+from src.exceptions import ValidationError, GmailAPIError, AuthenticationError
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
