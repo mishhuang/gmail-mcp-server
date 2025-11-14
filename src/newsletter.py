@@ -1,12 +1,15 @@
 """Newsletter fetching and processing utilities for Gmail MCP Server."""
 
 import re
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import Resource
 
 from .gmail_client import parse_email_content
+
+logger = logging.getLogger(__name__)
 
 
 # Default newsletter sender email addresses
@@ -41,44 +44,81 @@ def extract_main_content(html: str) -> str:
     """
     Extract main content from HTML email, removing headers/footers/unsubscribe links.
     
+    This function:
+    - Removes script/style tags and metadata
+    - Strips common newsletter footers (unsubscribe, social links)
+    - Preserves important formatting (headings, lists)
+    - Formats links as [text](url) for better readability
+    
     Args:
         html: HTML content of email
         
     Returns:
-        str: Cleaned main content
+        str: Cleaned main content with preserved structure
+        
+    Example:
+        >>> html = '<html><body><h1>Title</h1><p>Content</p></body></html>'
+        >>> extract_main_content(html)
+        'Title\\n\\nContent'
     """
     if not html:
         return ""
     
-    soup = BeautifulSoup(html, 'html.parser')
-    
-    # Remove unwanted elements
-    for element in soup(['script', 'style', 'head', 'footer']):
-        element.decompose()
-    
-    # Remove unsubscribe links and footers (common patterns)
-    unsubscribe_patterns = [
-        'unsubscribe',
-        'manage preferences',
-        'update your preferences',
-        'why did I get this',
-        'sent to',
-        'you received this email',
-        'no longer want to receive',
-    ]
-    
-    for element in soup.find_all(string=True):
-        text_lower = element.lower() if isinstance(element, str) else ""
-        if any(pattern in text_lower for pattern in unsubscribe_patterns):
-            parent = element.parent
-            if parent:
-                # Try to remove the parent container
-                parent.decompose()
-    
-    # Get text content
-    text = soup.get_text(separator='\n', strip=True)
-    
-    return text
+    try:
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Remove unwanted elements
+        for element in soup(['script', 'style', 'head', 'footer', 'meta', 'link', 'noscript']):
+            element.decompose()
+        
+        # Remove elements with unsubscribe/footer classes or IDs
+        footer_patterns = ['footer', 'unsubscribe', 'social', 'share', 'preference']
+        for pattern in footer_patterns:
+            for element in soup.find_all(class_=re.compile(pattern, re.I)):
+                element.decompose()
+            for element in soup.find_all(id=re.compile(pattern, re.I)):
+                element.decompose()
+        
+        # Convert links to readable format [text](url)
+        for link in soup.find_all('a'):
+            href = link.get('href', '')
+            text = link.get_text(strip=True)
+            if href and text and not href.startswith('#'):
+                link.replace_with(f"[{text}]({href})")
+        
+        # Add spacing around headings for better structure
+        for tag in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            tag.insert_before('\n\n')
+            tag.insert_after('\n')
+        
+        # Remove unsubscribe links and footers (common text patterns)
+        unsubscribe_patterns = [
+            'unsubscribe',
+            'manage preferences',
+            'update your preferences',
+            'why did I get this',
+            'sent to',
+            'you received this email',
+            'no longer want to receive',
+            'email settings',
+            'stop receiving',
+        ]
+        
+        for element in soup.find_all(string=True):
+            text_lower = element.lower() if isinstance(element, str) else ""
+            if any(pattern in text_lower for pattern in unsubscribe_patterns):
+                parent = element.parent
+                if parent and len(text_lower) < 100:  # Only remove short unsubscribe snippets
+                    parent.decompose()
+        
+        # Get text content with preserved structure
+        text = soup.get_text(separator='\n', strip=True)
+        
+        return text
+        
+    except Exception as e:
+        logger.error(f"Error extracting main content from HTML: {e}")
+        return ""
 
 
 def clean_email_content(html_content: str, plain_content: str) -> str:
@@ -229,7 +269,7 @@ def fetch_newsletters(
                 newsletters_by_sender[sender] = sender_emails
                 
         except Exception as e:
-            print(f"Error fetching newsletters from {sender}: {e}")
+            logger.error(f"Error fetching newsletters from {sender}: {e}")
             continue
     
     return {

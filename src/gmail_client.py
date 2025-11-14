@@ -2,6 +2,7 @@
 
 import base64
 import re
+import logging
 from typing import Optional, List, Dict, Any, Tuple
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -12,6 +13,8 @@ from googleapiclient.errors import HttpError
 from .auth import build_gmail_service
 from .validation import validate_email, validate_message_id
 from .exceptions import ValidationError, GmailAPIError
+
+logger = logging.getLogger(__name__)
 
 
 def encode_message(message: MIMEText) -> str:
@@ -158,7 +161,7 @@ def decode_base64_data(data: str) -> str:
         decoded_bytes = base64.urlsafe_b64decode(data)
         return decoded_bytes.decode('utf-8', errors='replace')
     except Exception as e:
-        print(f"Error decoding base64 data: {e}")
+        logger.error(f"Error decoding base64 data: {e}")
         return ""
 
 
@@ -305,7 +308,7 @@ class GmailClient:
             self.service = build_gmail_service()
             return self.service is not None
         except Exception as e:
-            print(f"Authentication failed: {e}")
+            logger.error(f"Authentication failed: {e}")
             return False
     
     def get_profile(self) -> Optional[Dict[str, Any]]:
@@ -323,7 +326,7 @@ class GmailClient:
             profile = self.service.users().getProfile(userId='me').execute()
             return profile
         except Exception as e:
-            print(f"Error getting profile: {e}")
+            logger.error(f"Error getting profile: {e}")
             return None
     
     def list_messages(
@@ -362,7 +365,7 @@ class GmailClient:
             messages = results.get('messages', [])
             return messages
         except Exception as e:
-            print(f"Error listing messages: {e}")
+            logger.error(f"Error listing messages: {e}")
             return None
     
     def get_message(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -386,7 +389,7 @@ class GmailClient:
             ).execute()
             return message
         except Exception as e:
-            print(f"Error getting message {message_id}: {e}")
+            logger.error(f"Error getting message {message_id}: {e}")
             return None
     
     def get_email_summaries(
@@ -423,7 +426,7 @@ class GmailClient:
             
             return summaries
         except Exception as e:
-            print(f"Error getting email summaries: {e}")
+            logger.error(f"Error getting email summaries: {e}")
             return []
     
     def get_parsed_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -509,7 +512,7 @@ class GmailClient:
             print(f"Gmail API error sending message: {e}")
             return None
         except Exception as e:
-            print(f"Error sending message: {e}")
+            logger.error(f"Error sending message: {e}")
             return None
     
     def reply_to_email(
@@ -564,7 +567,7 @@ class GmailClient:
         except ValueError:
             raise
         except Exception as e:
-            print(f"Error sending reply: {e}")
+            logger.error(f"Error sending reply: {e}")
             return None
     
     def mark_as_read(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -596,7 +599,7 @@ class GmailClient:
             print(f"Gmail API error marking as read: {e}")
             return None
         except Exception as e:
-            print(f"Error marking message as read: {e}")
+            logger.error(f"Error marking message as read: {e}")
             return None
     
     def mark_as_unread(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -628,7 +631,7 @@ class GmailClient:
             print(f"Gmail API error marking as unread: {e}")
             return None
         except Exception as e:
-            print(f"Error marking message as unread: {e}")
+            logger.error(f"Error marking message as unread: {e}")
             return None
     
     def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -663,7 +666,7 @@ class GmailClient:
             print(f"Gmail API error archiving email: {e}")
             return None
         except Exception as e:
-            print(f"Error archiving email: {e}")
+            logger.error(f"Error archiving email: {e}")
             return None
     
     def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -698,7 +701,7 @@ class GmailClient:
             print(f"Gmail API error deleting email: {e}")
             return None
         except Exception as e:
-            print(f"Error deleting email: {e}")
+            logger.error(f"Error deleting email: {e}")
             return None
     
     def modify_labels(
@@ -747,7 +750,7 @@ class GmailClient:
             print(f"Gmail API error modifying labels: {e}")
             return None
         except Exception as e:
-            print(f"Error modifying labels: {e}")
+            logger.error(f"Error modifying labels: {e}")
             return None
     
     def batch_modify_emails(
@@ -847,7 +850,7 @@ class GmailClient:
             print(f"Gmail API error marking as read: {e}")
             return None
         except Exception as e:
-            print(f"Error marking message as read: {e}")
+            logger.error(f"Error marking message as read: {e}")
             return None
     
     def mark_as_unread(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -877,7 +880,7 @@ class GmailClient:
             print(f"Gmail API error marking as unread: {e}")
             return None
         except Exception as e:
-            print(f"Error marking message as unread: {e}")
+            logger.error(f"Error marking message as unread: {e}")
             return None
     
     def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -907,7 +910,7 @@ class GmailClient:
             print(f"Gmail API error archiving email: {e}")
             return None
         except Exception as e:
-            print(f"Error archiving email: {e}")
+            logger.error(f"Error archiving email: {e}")
             return None
     
     def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -939,7 +942,7 @@ class GmailClient:
             print(f"Gmail API error deleting email: {e}")
             return None
         except Exception as e:
-            print(f"Error deleting email: {e}")
+            logger.error(f"Error deleting email: {e}")
             return None
     
     def modify_labels(
@@ -985,7 +988,7 @@ class GmailClient:
             print(f"Gmail API error modifying labels: {e}")
             return None
         except Exception as e:
-            print(f"Error modifying labels: {e}")
+            logger.error(f"Error modifying labels: {e}")
             return None
     
     def batch_modify_emails(

@@ -1,6 +1,26 @@
 # Gmail MCP Server
 
+![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active-success)
+
 A powerful Model Context Protocol (MCP) server that provides Gmail integration for AI assistants like Claude. Built with FastMCP and the Gmail API, this server enables reading, sending, managing emails, and aggregating newsletters.
+
+## Quick Start
+
+```bash
+# Clone and install
+git clone https://github.com/mishhuang/gmail-mcp-server.git
+cd gmail-mcp-server
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Authenticate
+python authenticate.py
+
+# Start server
+python sse_server.py
+```
 
 ## Features
 
@@ -491,6 +511,54 @@ python -c "from src.validation import validate_email; validate_email('test@examp
 
 # Test newsletter fetching
 python -c "from src.newsletter import calculate_date_filter; print(calculate_date_filter(36))"
+```
+
+## Performance & Best Practices
+
+### Gmail API Quotas
+
+- **Daily Quota:** 1 billion units/day (generous for most use cases)
+- **Per-User Rate Limit:** 250 units/second
+- **Email Operations:** 5-25 units each
+- **Batch Requests:** More efficient for multiple operations
+
+### Optimization Tips
+
+1. **Newsletter Aggregation:**
+   - Run once daily (morning) to aggregate last 24-36 hours
+   - Process newsletters in batches during off-peak hours
+   - Use specific sender filters to reduce API calls
+
+2. **Email Reading:**
+   - Use `max_results` parameter to limit fetches
+   - Apply specific search queries to narrow results
+   - Request only needed fields when possible
+
+3. **Rate Limiting:**
+   - The server includes automatic retry logic with exponential backoff
+   - Errors are logged for troubleshooting
+   - Consider spacing out large batch operations
+
+4. **Authentication:**
+   - Tokens are cached and automatically refreshed
+   - Re-authentication only needed if token.json is deleted
+   - No manual intervention required for token expiry
+
+### Example Workflow
+
+**Daily Newsletter Digest:**
+```python
+# Run this once per morning
+newsletters = fetch_newsletters(hours_back=36)
+# Send to Claude for summarization
+# Typically uses ~50-100 API units
+```
+
+**Email Management:**
+```python
+# Efficient inbox cleanup
+emails = search_emails("is:unread older_than:7d", max_results=50)
+# Process and archive in batches
 ```
 
 ## Security Considerations

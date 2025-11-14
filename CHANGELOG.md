@@ -5,6 +5,24 @@ All notable changes to the Gmail MCP Server project will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2024-11-14
+
+### Improved
+
+- **Enhanced Logging**: Replaced print statements with proper Python logging throughout the codebase
+- **Better Newsletter Parsing**: Improved HTML content extraction with link formatting `[text](url)` and better structure preservation
+- **Package Structure**: Enhanced `src/__init__.py` with proper package metadata and exports
+- **Documentation**: Added comprehensive usage examples in `examples/usage_examples.md`
+- **README Updates**: Added badges, quick start section, and performance best practices
+
+### Technical
+
+- Logging configured across all modules (`auth`, `gmail_client`, `newsletter`)
+- Newsletter content extraction now preserves headings and formats links inline  
+- Better removal of newsletter footers and unsubscribe sections
+- Package now exports key classes for easier imports (`GmailClient`, exception classes)
+- MCP config example added for Claude Desktop integration
+
 ## [0.1.0] - 2024-11-12
 
 ### Added
