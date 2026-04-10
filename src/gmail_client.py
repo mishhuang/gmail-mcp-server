@@ -159,7 +159,7 @@ def decode_base64_data(data: str) -> str:
         decoded_bytes = base64.urlsafe_b64decode(data)
         return decoded_bytes.decode('utf-8', errors='replace')
     except Exception as e:
-        logger.error(f"Error decoding base64 data: {e}")
+        logger.error("Error decoding base64 data: %s", e)
         return ""
 
 
@@ -306,7 +306,7 @@ class GmailClient:
             self.service = build_gmail_service()
             return self.service is not None
         except Exception as e:
-            logger.error(f"Authentication failed: {e}")
+            logger.error("Authentication failed: %s", e)
             return False
     
     def get_profile(self) -> Optional[Dict[str, Any]]:
@@ -324,7 +324,7 @@ class GmailClient:
             profile = self.service.users().getProfile(userId='me').execute()
             return profile
         except Exception as e:
-            logger.error(f"Error getting profile: {e}")
+            logger.error("Error getting profile: %s", e)
             return None
     
     def list_messages(
@@ -363,7 +363,7 @@ class GmailClient:
             messages = results.get('messages', [])
             return messages
         except Exception as e:
-            logger.error(f"Error listing messages: {e}")
+            logger.error("Error listing messages: %s", e)
             return None
     
     def get_message(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -387,7 +387,7 @@ class GmailClient:
             ).execute()
             return message
         except Exception as e:
-            logger.error(f"Error getting message {message_id}: {e}")
+            logger.error("Error getting message %s: %s", message_id, e)
             return None
     
     def get_email_summaries(
@@ -424,7 +424,7 @@ class GmailClient:
             
             return summaries
         except Exception as e:
-            logger.error(f"Error getting email summaries: {e}")
+            logger.error("Error getting email summaries: %s", e)
             return []
     
     def get_parsed_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -510,7 +510,7 @@ class GmailClient:
             logger.error("Gmail API error sending message: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error sending message: {e}")
+            logger.error("Error sending message: %s", e)
             return None
     
     def reply_to_email(
@@ -595,7 +595,7 @@ class GmailClient:
             logger.error("Gmail API error marking as read: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error marking message as read: {e}")
+            logger.error("Error marking message as read: %s", e)
             return None
     
     def mark_as_unread(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -625,7 +625,7 @@ class GmailClient:
             logger.error("Gmail API error marking as unread: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error marking message as unread: {e}")
+            logger.error("Error marking message as unread: %s", e)
             return None
     
     def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -657,7 +657,7 @@ class GmailClient:
             logger.error("Gmail API error archiving email: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error archiving email: {e}")
+            logger.error("Error archiving email: %s", e)
             return None
     
     def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
@@ -688,7 +688,7 @@ class GmailClient:
             logger.error("Gmail API error deleting email: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error deleting email: {e}")
+            logger.error("Error deleting email: %s", e)
             return None
     
     def modify_labels(
@@ -734,7 +734,7 @@ class GmailClient:
             logger.error("Gmail API error modifying labels: %s", e)
             return None
         except Exception as e:
-            logger.error(f"Error modifying labels: {e}")
+            logger.error("Error modifying labels: %s", e)
             return None
     
     def batch_modify_emails(
@@ -786,18 +786,4 @@ class GmailClient:
                 results['errors'].append(f"Error on {msg_id}: {str(e)}")
         
         return results
-    
-    # Placeholder methods for future implementation
-    
-    def list_labels(self) -> Optional[List[Dict[str, Any]]]:
-        """
-        List all labels in the user's mailbox.
-        
-        Returns:
-            Optional[List[Dict[str, Any]]]: List of label objects, or None if error occurs.
-            
-        Note:
-            This is a placeholder. Full implementation coming soon.
-        """
-        raise NotImplementedError("list_labels will be implemented in future updates")
 

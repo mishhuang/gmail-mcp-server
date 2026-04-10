@@ -118,7 +118,7 @@ def extract_main_content(html: str) -> str:
         return text
         
     except Exception as e:
-        logger.error(f"Error extracting main content from HTML: {e}")
+        logger.error("Error extracting main content from HTML: %s", e)
         return ""
 
 
@@ -283,7 +283,7 @@ def fetch_newsletters(
                 newsletters_by_sender[sender] = sender_emails
                 
         except Exception as e:
-            logger.error(f"Error fetching newsletters from {sender}: {e}")
+            logger.error("Error fetching newsletters from %s: %s", sender, e)
             continue
     
     return {
