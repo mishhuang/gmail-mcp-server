@@ -22,7 +22,6 @@ GMAIL_SCOPES: List[str] = [
 
 # OAuth callback configuration
 OAUTH_PORT = int(os.getenv("OAUTH_PORT", "8080"))
-OAUTH_REDIRECT_URI = f"http://localhost:{OAUTH_PORT}/"
 
 # Server configuration
 SERVER_NAME = "gmail-mcp-server"

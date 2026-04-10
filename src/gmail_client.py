@@ -6,13 +6,11 @@ import logging
 from typing import Optional, List, Dict, Any, Tuple
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import parsedate_to_datetime
 from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 
 from .auth import build_gmail_service
-from .validation import validate_email, validate_message_id
-from .exceptions import ValidationError, GmailAPIError
+from .validation import validate_email
 
 logger = logging.getLogger(__name__)
 
