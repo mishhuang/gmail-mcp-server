@@ -1,7 +1,6 @@
 # Gmail MCP Server
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-active-success)
 
 A powerful Model Context Protocol (MCP) server that provides Gmail integration for AI assistants like Claude. Built with FastMCP and the Gmail API, this server enables reading, sending, managing emails, and aggregating newsletters.
@@ -571,28 +570,6 @@ emails = search_emails("is:unread older_than:7d", max_results=50)
 - Tokens auto-refresh, limiting exposure time
 - Scopes limit what the app can access
 - Delete `token.json` if compromised and re-authenticate
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Follow existing code style (PEP 8)
-5. Add docstrings to all functions
-6. Update README.md if needed
-7. Submit a pull request
-
-## License
-
-[Add your license here]
-
-## Support
-
-- 🐛 [Report Bugs](https://github.com/mishhuang/gmail-mcp-server/issues)
-- 💬 [Discussions](https://github.com/mishhuang/gmail-mcp-server/discussions)
-- 📧 Email: [your-email]
 
 ## Resources
 
