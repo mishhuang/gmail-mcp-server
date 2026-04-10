@@ -139,9 +139,10 @@ python sse_server.py
 
 The server will start on `http://localhost:5553/sse`
 
-### Configure Claude Desktop
+### Configure an MCP Client
 
-Add this to your Claude Desktop config file:
+The server exposes an SSE endpoint at `http://localhost:5553/sse`. Point any
+MCP-compatible client at that URL. For example, in Claude Desktop:
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -150,21 +151,23 @@ Add this to your Claude Desktop config file:
 {
   "mcpServers": {
     "gmail": {
-      "command": "python",
-      "args": [
-        "/absolute/path/to/gmail-mcp-server/sse_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/absolute/path/to/gmail-mcp-server"
-      }
+      "url": "http://localhost:5553/sse"
     }
   }
 }
 ```
 
-Replace `/absolute/path/to/gmail-mcp-server` with your actual project path.
+> **Note:** Start the server (`python sse_server.py`) before launching the client.
 
 ## Available Tools
+
+### 🔧 Diagnostics
+
+#### `test_connection`
+Verify the MCP server is running.
+
+#### `test_gmail_auth`
+Test Gmail API authentication and display the connected email address.
 
 ### 📬 Email Reading
 
@@ -332,7 +335,7 @@ SSE_PORT=5553                      # MCP server port
 
 # Anthropic API (for client testing)
 ANTHROPIC_API_KEY=your_key_here
-ANTHROPIC_MODEL_NAME=claude-sonnet-4-20250514
+ANTHROPIC_MODEL_NAME=claude-sonnet-4-5-20250929
 ```
 
 ### Gmail API Scopes
@@ -454,7 +457,7 @@ def your_new_method(self, param: str) -> Optional[Dict]:
         result = self.service.users().someOperation(...).execute()
         return result
     except HttpError as e:
-        print(f"Error: {e}")
+        logger.error("Gmail API error: %s", e)
         return None
 ```
 
@@ -496,7 +499,7 @@ python sse_client.py  # Test with client
 
 ### Testing
 
-Run the test suite:
+Verify authentication works:
 
 ```bash
 python -c "from src.auth import verify_authentication; verify_authentication()"
@@ -534,7 +537,6 @@ python -c "from src.newsletter import calculate_date_filter; print(calculate_dat
    - Request only needed fields when possible
 
 3. **Rate Limiting:**
-   - The server includes automatic retry logic with exponential backoff
    - Errors are logged for troubleshooting
    - Consider spacing out large batch operations
 
@@ -556,7 +558,7 @@ newsletters = fetch_newsletters(hours_back=36)
 **Email Management:**
 ```python
 # Efficient inbox cleanup
-emails = search_emails("is:unread older_than:7d", max_results=50)
+emails = list_emails(query="is:unread older_than:7d", max_results=50)
 # Process and archive in batches
 ```
 
