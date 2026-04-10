@@ -102,11 +102,12 @@ def _truncate_for_context_window(text: str) -> str:
 async def main():
     client = SSE_MCP_Client()
     chat = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    model_name = os.getenv("ANTHROPIC_MODEL_NAME", "claude-sonnet-4-20250514")
+    model_name = os.getenv("ANTHROPIC_MODEL_NAME", "claude-sonnet-4-5-20250929")
     print(f"Using model: {model_name}")
 
     try:
-        await client.connect_to_server("http://localhost:5553/sse")
+        server_url = os.getenv("SSE_SERVER_URL", f"http://localhost:{os.getenv('SSE_PORT', '5553')}/sse")
+        await client.connect_to_server(server_url)
         tools = await client.get_tools()
         formatted_tools = reformat_tools_for_anthropic(tools)
 
@@ -121,6 +122,7 @@ async def main():
 
         while True:
             if not user_message:
+                user_message = input("Input: ")
                 continue
 
             while True:
