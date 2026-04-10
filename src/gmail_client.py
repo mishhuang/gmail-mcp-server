@@ -509,7 +509,7 @@ class GmailClient:
             return sent_message
             
         except HttpError as e:
-            print(f"Gmail API error sending message: {e}")
+            logger.error("Gmail API error sending message: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error sending message: {e}")
@@ -562,7 +562,7 @@ class GmailClient:
             return sent_reply
             
         except HttpError as e:
-            print(f"Gmail API error sending reply: {e}")
+            logger.error("Gmail API error sending reply: %s", e)
             return None
         except ValueError:
             raise
@@ -594,7 +594,7 @@ class GmailClient:
             ).execute()
             return result
         except HttpError as e:
-            print(f"Gmail API error marking as read: {e}")
+            logger.error("Gmail API error marking as read: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error marking message as read: {e}")
@@ -624,7 +624,7 @@ class GmailClient:
             ).execute()
             return result
         except HttpError as e:
-            print(f"Gmail API error marking as unread: {e}")
+            logger.error("Gmail API error marking as unread: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error marking message as unread: {e}")
@@ -656,7 +656,7 @@ class GmailClient:
                 body={'removeLabelIds': ['INBOX']},
             ).execute()
         except HttpError as e:
-            print(f"Gmail API error archiving email: {e}")
+            logger.error("Gmail API error archiving email: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error archiving email: {e}")
@@ -687,7 +687,7 @@ class GmailClient:
                 id=message_id,
             ).execute()
         except HttpError as e:
-            print(f"Gmail API error deleting email: {e}")
+            logger.error("Gmail API error deleting email: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error deleting email: {e}")
@@ -733,7 +733,7 @@ class GmailClient:
             ).execute()
             return result
         except HttpError as e:
-            print(f"Gmail API error modifying labels: {e}")
+            logger.error("Gmail API error modifying labels: %s", e)
             return None
         except Exception as e:
             logger.error(f"Error modifying labels: {e}")

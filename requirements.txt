@@ -1,16 +1,16 @@
 # Core MCP dependencies
 mcp==1.2.0
-fastmcp
+fastmcp==1.0
 python-dotenv==1.0.1
 
 # Gmail API dependencies
-google-auth>=2.34.0
-google-auth-oauthlib>=1.2.0
-google-auth-httplib2>=0.2.0
-google-api-python-client>=2.147.0
+google-auth==2.41.1
+google-auth-oauthlib==1.2.3
+google-auth-httplib2==0.2.1
+google-api-python-client==2.187.0
 
 # HTML parsing for newsletter content
-beautifulsoup4>=4.12.0
+beautifulsoup4==4.14.2
 
 # Client dependencies (for testing with Anthropic API)
 anthropic==0.42.0

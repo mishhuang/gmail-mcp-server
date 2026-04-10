@@ -19,15 +19,24 @@ Main modules:
 __version__ = "0.1.0"
 __author__ = "Michelle Huang"
 
-# Import key classes for easier access
-from .gmail_client import GmailClient
-from .exceptions import (
-    GmailMCPError,
-    AuthenticationError,
-    GmailAPIError,
-    ValidationError,
-    RateLimitError,
-)
+
+def __getattr__(name: str):
+    """Lazy imports so that `import src` doesn't pull in Google libs immediately."""
+    _lazy = {
+        "GmailClient": ("gmail_client", "GmailClient"),
+        "GmailMCPError": ("exceptions", "GmailMCPError"),
+        "AuthenticationError": ("exceptions", "AuthenticationError"),
+        "GmailAPIError": ("exceptions", "GmailAPIError"),
+        "ValidationError": ("exceptions", "ValidationError"),
+        "RateLimitError": ("exceptions", "RateLimitError"),
+    }
+    if name in _lazy:
+        module_name, attr = _lazy[name]
+        import importlib
+        mod = importlib.import_module(f".{module_name}", __package__)
+        return getattr(mod, attr)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "GmailClient",
@@ -37,4 +46,3 @@ __all__ = [
     "ValidationError",
     "RateLimitError",
 ]
-
