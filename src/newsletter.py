@@ -22,6 +22,14 @@ NEWSLETTER_SENDERS = {
     'alpha_signal': 'news@alphasignal.ai',
 }
 
+NEWSLETTER_DISPLAY_NAMES = {
+    'bens_bites': "Ben's Bites",
+    'the_neuron': 'The Neuron',
+    'the_rundown': 'The Rundown AI',
+    'last_week_in_ai': 'Last Week in AI',
+    'alpha_signal': 'Alpha Signal',
+}
+
 
 def calculate_date_filter(hours_back: int) -> str:
     """
@@ -304,13 +312,10 @@ def get_sender_name(email: str) -> str:
     Returns:
         str: Friendly name or email if not recognized
     """
-    # Reverse lookup in NEWSLETTER_SENDERS
-    for name, sender_email in NEWSLETTER_SENDERS.items():
+    for key, sender_email in NEWSLETTER_SENDERS.items():
         if sender_email == email:
-            # Convert 'bens_bites' to "Ben's Bites"
-            return name.replace('_', ' ').title().replace(' S ', "'s ")
+            return NEWSLETTER_DISPLAY_NAMES.get(key, key.replace('_', ' ').title())
     
-    # Extract domain name as fallback
     if '@' in email:
         domain = email.split('@')[1].split('.')[0]
         return domain.title()
