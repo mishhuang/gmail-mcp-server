@@ -636,32 +636,32 @@ class GmailClient:
     
     def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
         """
-        Archive an email by removing it from the INBOX.
+        Archive by removing INBOX from the whole thread (same as Gmail "archive" on a conversation).
         
-        Note: Archiving removes the INBOX label but keeps the email in "All Mail".
-        The email can still be found via search and labels.
-        
-        Args:
-            message_id: Gmail message ID
-            
-        Returns:
-            Optional[Dict[str, Any]]: Modified message details, or None if operation fails
-            
-        Raises:
-            RuntimeError: If client not authenticated
+        Message-level archive leaves sibling messages in the thread in Inbox, so the thread
+        can still appear in the inbox list.
         """
         if not self.service:
             raise RuntimeError("Client not authenticated. Call authenticate() first.")
         
         try:
-            result = self.service.users().messages().modify(
+            msg = self.service.users().messages().get(
                 userId='me',
                 id=message_id,
-                body={'removeLabelIds': ['INBOX']}
+                format='minimal',
             ).execute()
-            
-            return result
-            
+            thread_id = msg.get('threadId')
+            if thread_id:
+                return self.service.users().threads().modify(
+                    userId='me',
+                    id=thread_id,
+                    body={'removeLabelIds': ['INBOX']},
+                ).execute()
+            return self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['INBOX']},
+            ).execute()
         except HttpError as e:
             print(f"Gmail API error archiving email: {e}")
             return None
@@ -885,27 +885,29 @@ class GmailClient:
     
     def archive_email(self, message_id: str) -> Optional[Dict[str, Any]]:
         """
-        Archive an email by removing the INBOX label.
-        
-        Args:
-            message_id: Gmail message ID
-            
-        Returns:
-            Optional[Dict[str, Any]]: Modified message details, or None if error
-            
-        Raises:
-            RuntimeError: If client not authenticated
+        Archive by removing INBOX from the whole thread (same as Gmail "archive" on a conversation).
         """
         if not self.service:
             raise RuntimeError("Client not authenticated. Call authenticate() first.")
         
         try:
-            result = self.service.users().messages().modify(
+            msg = self.service.users().messages().get(
                 userId='me',
                 id=message_id,
-                body={'removeLabelIds': ['INBOX']}
+                format='minimal',
             ).execute()
-            return result
+            thread_id = msg.get('threadId')
+            if thread_id:
+                return self.service.users().threads().modify(
+                    userId='me',
+                    id=thread_id,
+                    body={'removeLabelIds': ['INBOX']},
+                ).execute()
+            return self.service.users().messages().modify(
+                userId='me',
+                id=message_id,
+                body={'removeLabelIds': ['INBOX']},
+            ).execute()
         except HttpError as e:
             print(f"Gmail API error archiving email: {e}")
             return None

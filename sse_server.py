@@ -9,7 +9,14 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 
-from src.config import SERVER_NAME, SSE_PORT, DEFAULT_NEWSLETTER_HOURS
+from src.config import (
+    SERVER_NAME,
+    SSE_PORT,
+    DEFAULT_NEWSLETTER_HOURS,
+    READ_EMAIL_HTML_MAX_CHARS,
+    READ_EMAIL_PLAIN_MAX_CHARS,
+    truncate_for_tool,
+)
 from src.gmail_client import GmailClient
 from src.newsletter import fetch_newsletters as fetch_newsletters_func, get_sender_name
 from src.validation import (
@@ -152,7 +159,18 @@ def read_email(message_id: str) -> str:
             return json.dumps({
                 "error": f"Email not found with ID: {message_id}"
             })
-        
+
+        email_data["plain_body"] = truncate_for_tool(
+            email_data.get("plain_body") or "",
+            READ_EMAIL_PLAIN_MAX_CHARS,
+            "plain_body",
+        )
+        email_data["html_body"] = truncate_for_tool(
+            email_data.get("html_body") or "",
+            READ_EMAIL_HTML_MAX_CHARS,
+            "html_body",
+        )
+
         return json.dumps(email_data, indent=2)
         
     except Exception as e:
@@ -388,6 +406,26 @@ def fetch_newsletters(hours_back: int = 36, sender_emails: str = "") -> str:
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
+
+        # MCP / LLM clients may pass hours_back as str or float; newsletter code needs int.
+        if isinstance(hours_back, bool):
+            return json.dumps({"error": "hours_back must be an integer"})
+        try:
+            if isinstance(hours_back, float):
+                if not hours_back.is_integer():
+                    return json.dumps({"error": "hours_back must be a whole number"})
+                hours_back = int(hours_back)
+            elif isinstance(hours_back, str):
+                hours_back = int(hours_back.strip())
+            elif not isinstance(hours_back, int):
+                return json.dumps({
+                    "error": f"hours_back must be an integer, got {type(hours_back).__name__}"
+                })
+            validate_hours_back(hours_back)
+        except ValueError:
+            return json.dumps({"error": "hours_back must be a valid whole number"})
+        except ValidationError as e:
+            return json.dumps({"error": str(e)})
         
         # Parse custom senders if provided
         custom_senders = None

@@ -7,18 +7,19 @@ from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import Resource
 
+from .config import NEWSLETTER_MAX_BODY_CHARS, NEWSLETTER_MAX_RESULTS_PER_SENDER
 from .gmail_client import parse_email_content
 
 logger = logging.getLogger(__name__)
 
 
-# Default newsletter sender email addresses
+# Default newsletter sender email addresses (From: addresses as seen in Gmail)
 NEWSLETTER_SENDERS = {
-    'bens_bites': 'hello@bensbites.beehiiv.com',
-    'the_neuron': 'newsletter@theneurondaily.com',
-    'the_rundown': 'team@rundown.ai',
-    'last_week_in_ai': 'hello@lastweekin.ai',
-    'alpha_signal': 'newsletter@alphasignal.ai',
+    'bens_bites': 'bensbites@substack.com',
+    'the_neuron': 'theneuron@newsletter.theneurondaily.com',
+    'the_rundown': 'news@daily.therundown.ai',
+    'last_week_in_ai': 'lastweekinai+news@substack.com',
+    'alpha_signal': 'news@alphasignal.ai',
 }
 
 
@@ -121,13 +122,18 @@ def extract_main_content(html: str) -> str:
         return ""
 
 
-def clean_email_content(html_content: str, plain_content: str) -> str:
+def clean_email_content(
+    html_content: str,
+    plain_content: str,
+    max_length: int = 50000,
+) -> str:
     """
     Clean and format email content, preferring HTML but falling back to plain text.
     
     Args:
         html_content: HTML version of email body
         plain_content: Plain text version of email body
+        max_length: Max characters after cleaning (default 50000; newsletters use less)
         
     Returns:
         str: Cleaned and formatted content
@@ -163,8 +169,6 @@ def clean_email_content(html_content: str, plain_content: str) -> str:
     cleaned = '\n'.join(cleaned_lines)
     cleaned = re.sub(r' +', ' ', cleaned)
     
-    # Limit to reasonable length (avoid massive emails)
-    max_length = 50000  # ~50k characters
     if len(cleaned) > max_length:
         cleaned = cleaned[:max_length] + "\n\n[Content truncated for length...]"
     
@@ -226,7 +230,7 @@ def fetch_newsletters(
             results = service.users().messages().list(
                 userId='me',
                 q=query,
-                maxResults=10  # Reasonable limit per sender
+                maxResults=NEWSLETTER_MAX_RESULTS_PER_SENDER,
             ).execute()
             
             messages = results.get('messages', [])
@@ -238,32 +242,42 @@ def fetch_newsletters(
             
             # Fetch and parse each message
             for msg_ref in messages:
-                msg_id = msg_ref['id']
-                
-                # Get full message
-                message = service.users().messages().get(
-                    userId='me',
-                    id=msg_id,
-                    format='full'
-                ).execute()
-                
-                # Parse email content
-                parsed = parse_email_content(message)
-                
-                # Clean content
-                cleaned_content = clean_email_content(
-                    parsed.get('html_body', ''),
-                    parsed.get('plain_body', '')
-                )
-                
-                sender_emails.append({
-                    'id': parsed['id'],
-                    'subject': parsed['subject'],
-                    'date': parsed['date'],
-                    'content': cleaned_content
-                })
-                
-                total_emails += 1
+                try:
+                    msg_id = msg_ref['id']
+                    
+                    # Get full message
+                    message = service.users().messages().get(
+                        userId='me',
+                        id=msg_id,
+                        format='full'
+                    ).execute()
+                    
+                    # Parse email content
+                    parsed = parse_email_content(message)
+                    
+                    # Clean content
+                    cleaned_content = clean_email_content(
+                        parsed.get('html_body', ''),
+                        parsed.get('plain_body', ''),
+                        max_length=NEWSLETTER_MAX_BODY_CHARS,
+                    )
+                    
+                    sender_emails.append({
+                        'id': parsed['id'],
+                        'subject': parsed['subject'],
+                        'date': parsed['date'],
+                        'content': cleaned_content
+                    })
+                    
+                    total_emails += 1
+                except Exception as e:
+                    logger.error(
+                        "Error processing newsletter message %s from %s: %s",
+                        msg_ref.get('id'),
+                        sender,
+                        e,
+                    )
+                    continue
             
             if sender_emails:
                 newsletters_by_sender[sender] = sender_emails
