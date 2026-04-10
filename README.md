@@ -262,14 +262,14 @@ mark_email_unread(message_id: str)
 ```
 
 #### `archive_email`
-Archive an email (remove from inbox).
+Archive an email thread (removes the entire conversation from inbox, keeps in All Mail).
 
 ```python
 archive_email(message_id: str)
 ```
 
 #### `delete_email`
-Move an email to trash (30-day retention).
+Trash an email thread (moves the entire conversation to trash, recoverable for ~30 days).
 
 ```python
 delete_email(message_id: str)
@@ -316,6 +316,11 @@ Edit `src/newsletter.py` to add your own newsletter senders:
 ```python
 NEWSLETTER_SENDERS = {
     'your_newsletter': 'newsletter@example.com',
+    # ... add more
+}
+
+NEWSLETTER_DISPLAY_NAMES = {
+    'your_newsletter': 'Your Newsletter',
     # ... add more
 }
 ```
@@ -476,7 +481,7 @@ def your_new_tool(param: str) -> str:
         str: JSON string with results
     """
     try:
-        logger.info(f"your_new_tool called with param={param}")
+        logger.info("your_new_tool called with param=%s", param)
         
         if not gmail_client.service:
             if not gmail_client.authenticate():
@@ -486,7 +491,7 @@ def your_new_tool(param: str) -> str:
         return json.dumps({"success": True, "data": result})
         
     except Exception as e:
-        logger.error(f"Error in your_new_tool: {e}")
+        logger.error("Error in your_new_tool: %s", e)
         return json.dumps({"error": str(e)})
 ```
 
@@ -516,13 +521,6 @@ python -c "from src.newsletter import calculate_date_filter; print(calculate_dat
 ```
 
 ## Performance & Best Practices
-
-### Gmail API Quotas
-
-- **Daily Quota:** 1 billion units/day (generous for most use cases)
-- **Per-User Rate Limit:** 250 units/second
-- **Email Operations:** 5-25 units each
-- **Batch Requests:** More efficient for multiple operations
 
 ### Optimization Tips
 
