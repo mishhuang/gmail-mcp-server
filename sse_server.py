@@ -598,10 +598,9 @@ def archive_email(message_id: str) -> str:
 @mcp.tool()
 def delete_email(message_id: str) -> str:
     """
-    Delete an email by moving it to trash.
-    
-    Note: The email will be moved to Trash and automatically deleted after 30 days.
-    You can recover it from Trash within that time period.
+    Move mail to trash (recoverable ~30 days). Uses any message id from list_emails:
+    if that message is part of a thread, the entire conversation is trashed—matching
+    Gmail behavior and avoiding a thread that stays visible with only some messages removed.
     
     Args:
         message_id: Gmail message ID (obtained from list_emails or read_email)
@@ -611,9 +610,6 @@ def delete_email(message_id: str) -> str:
     
     Example:
         - delete_email(message_id="18f2a3b4c5d6e7f8")
-    
-    Warning:
-        This moves the email to Trash. Use with caution.
     """
     try:
         # Ensure authenticated
@@ -633,7 +629,7 @@ def delete_email(message_id: str) -> str:
         
         return json.dumps({
             "success": True,
-            "message": "Email moved to trash (recoverable for 30 days)",
+            "message": "Moved to trash (whole thread if this message was in a conversation; recoverable ~30 days)",
             "message_id": message_id,
             "action": "delete"
         }, indent=2)

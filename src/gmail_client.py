@@ -664,29 +664,28 @@ class GmailClient:
     
     def delete_email(self, message_id: str) -> Optional[Dict[str, Any]]:
         """
-        Delete an email by moving it to trash.
-        
-        Args:
-            message_id: Gmail message ID
-            
-        Returns:
-            Optional[Dict[str, Any]]: Response from trash operation, or None if error
-            
-        Raises:
-            RuntimeError: If client not authenticated
-            
-        Note:
-            This moves the email to trash. To permanently delete, use the trash().delete() method.
+        Move mail to trash. If the message belongs to a thread, trashes the whole thread
+        (same idea as Gmail trash on a conversation). Otherwise trashes the single message.
         """
         if not self.service:
             raise RuntimeError("Client not authenticated. Call authenticate() first.")
         
         try:
-            result = self.service.users().messages().trash(
+            msg = self.service.users().messages().get(
                 userId='me',
-                id=message_id
+                id=message_id,
+                format='minimal',
             ).execute()
-            return result
+            thread_id = msg.get('threadId')
+            if thread_id:
+                return self.service.users().threads().trash(
+                    userId='me',
+                    id=thread_id,
+                ).execute()
+            return self.service.users().messages().trash(
+                userId='me',
+                id=message_id,
+            ).execute()
         except HttpError as e:
             print(f"Gmail API error deleting email: {e}")
             return None
