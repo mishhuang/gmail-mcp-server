@@ -27,6 +27,9 @@ OAUTH_PORT = int(os.getenv("OAUTH_PORT", "8080"))
 SERVER_NAME = "gmail-mcp-server"
 SSE_PORT = int(os.getenv("SSE_PORT", "5553"))
 
+# Write-mode guard: server starts read-only unless explicitly enabled.
+ALLOW_WRITE = os.getenv("ALLOW_WRITE", "false").lower() in ("true", "1", "yes")
+
 # Newsletter configuration
 DEFAULT_NEWSLETTER_HOURS = 36
 # Keep newsletter tool responses small enough for LLM context (many senders × many messages).

@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from src.config import (
     SERVER_NAME,
     SSE_PORT,
+    ALLOW_WRITE,
     READ_EMAIL_HTML_MAX_CHARS,
     READ_EMAIL_PLAIN_MAX_CHARS,
     truncate_for_tool,
@@ -35,6 +36,21 @@ mcp = FastMCP(SERVER_NAME, port=SSE_PORT)
 
 # Initialize Gmail client (will be used by tools)
 gmail_client = GmailClient()
+
+WRITE_DISABLED_MSG = "Write operations are disabled. Set ALLOW_WRITE=true in .env to enable."
+
+
+def _write_gate(confirm: bool, action: str, description: str) -> str | None:
+    """Return a JSON error/warning string if the write should not proceed, or None to continue."""
+    if not ALLOW_WRITE:
+        return json.dumps({"error": WRITE_DISABLED_MSG})
+    if not confirm:
+        return json.dumps({
+            "warning": description,
+            "action": action,
+            "requires_confirmation": True,
+        })
+    return None
 
 
 #### Tools ####
@@ -230,32 +246,35 @@ def search_emails(sender: str, after_date: str = "", max_results: int = 10) -> s
 
 
 @mcp.tool()
-def send_email(to: str, subject: str, body: str, is_html: bool = False) -> str:
+def send_email(to: str, subject: str, body: str, is_html: bool = False, confirm: bool = False) -> str:
     """
-    Send an email via Gmail.
+    Send an email via Gmail. Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to send.
     
     Args:
         to: Recipient email address (e.g., "recipient@example.com")
         subject: Email subject line
         body: Email body content
         is_html: Whether body is HTML format (default: False for plain text)
+        confirm: Set to true to confirm and execute the send
     
     Returns:
         str: JSON string with confirmation and message ID
     
     Examples:
-        - send_email(to="friend@example.com", subject="Hello", body="Hi there!")
-        - send_email(to="colleague@company.com", subject="Report", body="<h1>Report</h1>", is_html=True)
+        - send_email(to="friend@example.com", subject="Hello", body="Hi there!", confirm=true)
     """
+    gate = _write_gate(confirm, "send_email", f'About to send email to {to} with subject "{subject}". Call again with confirm=true to proceed.')
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Send email
         result = gmail_client.send_email(
             to=to,
             subject=subject,
@@ -288,36 +307,39 @@ def send_email(to: str, subject: str, body: str, is_html: bool = False) -> str:
 
 
 @mcp.tool()
-def reply_to_email(message_id: str, body: str, is_html: bool = False) -> str:
+def reply_to_email(message_id: str, body: str, is_html: bool = False, confirm: bool = False) -> str:
     """
-    Reply to an existing email message.
+    Reply to an existing email message. Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to send.
     
     Args:
         message_id: ID of the email to reply to (obtained from list_emails or read_email)
         body: Reply message content
         is_html: Whether body is HTML format (default: False for plain text)
+        confirm: Set to true to confirm and execute the reply
     
     Returns:
         str: JSON string with confirmation and reply message ID
     
     Examples:
-        - reply_to_email(message_id="18f2a3b4c5d6e7f8", body="Thanks for your email!")
-        - reply_to_email(message_id="18f2a3b4c5d6e7f8", body="<p>Got it!</p>", is_html=True)
+        - reply_to_email(message_id="18f2a3b4c5d6e7f8", body="Thanks!", confirm=true)
     
     Notes:
         - Automatically adds "Re: " to subject if not already present
         - Sets proper In-Reply-To and References headers for threading
         - Replies to the original sender
     """
+    gate = _write_gate(confirm, "reply_to_email", f"About to reply to message {message_id}. Call again with confirm=true to proceed.")
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Send reply
         result = gmail_client.reply_to_email(
             message_id=message_id,
             body=body,
@@ -454,28 +476,32 @@ def fetch_newsletters(hours_back: int = 36, sender_emails: str = "") -> str:
 
 
 @mcp.tool()
-def mark_email_read(message_id: str) -> str:
+def mark_email_read(message_id: str, confirm: bool = False) -> str:
     """
-    Mark an email as read.
+    Mark an email as read. Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to execute.
     
     Args:
         message_id: Gmail message ID (obtained from list_emails or read_email)
+        confirm: Set to true to confirm and execute the action
     
     Returns:
         str: JSON string with success confirmation
     
     Example:
-        - mark_email_read(message_id="18f2a3b4c5d6e7f8")
+        - mark_email_read(message_id="18f2a3b4c5d6e7f8", confirm=true)
     """
+    gate = _write_gate(confirm, "mark_email_read", f"About to mark message {message_id} as read. Call again with confirm=true to proceed.")
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Mark as read
         result = gmail_client.mark_as_read(message_id)
         
         if not result:
@@ -497,28 +523,32 @@ def mark_email_read(message_id: str) -> str:
 
 
 @mcp.tool()
-def mark_email_unread(message_id: str) -> str:
+def mark_email_unread(message_id: str, confirm: bool = False) -> str:
     """
-    Mark an email as unread.
+    Mark an email as unread. Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to execute.
     
     Args:
         message_id: Gmail message ID (obtained from list_emails or read_email)
+        confirm: Set to true to confirm and execute the action
     
     Returns:
         str: JSON string with success confirmation
     
     Example:
-        - mark_email_unread(message_id="18f2a3b4c5d6e7f8")
+        - mark_email_unread(message_id="18f2a3b4c5d6e7f8", confirm=true)
     """
+    gate = _write_gate(confirm, "mark_email_unread", f"About to mark message {message_id} as unread. Call again with confirm=true to proceed.")
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Mark as unread
         result = gmail_client.mark_as_unread(message_id)
         
         if not result:
@@ -540,31 +570,34 @@ def mark_email_unread(message_id: str) -> str:
 
 
 @mcp.tool()
-def archive_email(message_id: str) -> str:
+def archive_email(message_id: str, confirm: bool = False) -> str:
     """
-    Archive an email by removing it from the inbox.
+    Archive an email thread by removing it from the inbox. Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to execute.
     
-    Note: Archiving removes the email from your inbox but keeps it in "All Mail".
-    The email can still be found via search and other labels.
+    Note: Archiving removes the conversation from your inbox but keeps it in "All Mail".
     
     Args:
         message_id: Gmail message ID (obtained from list_emails or read_email)
+        confirm: Set to true to confirm and execute the archive
     
     Returns:
         str: JSON string with success confirmation
     
     Example:
-        - archive_email(message_id="18f2a3b4c5d6e7f8")
+        - archive_email(message_id="18f2a3b4c5d6e7f8", confirm=true)
     """
+    gate = _write_gate(confirm, "archive_email", f"About to archive thread for message {message_id} (removes from inbox, keeps in All Mail). Call again with confirm=true to proceed.")
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Archive email
         result = gmail_client.archive_email(message_id)
         
         if not result:
@@ -586,30 +619,33 @@ def archive_email(message_id: str) -> str:
 
 
 @mcp.tool()
-def delete_email(message_id: str) -> str:
+def delete_email(message_id: str, confirm: bool = False) -> str:
     """
-    Move mail to trash (recoverable ~30 days). Uses any message id from list_emails:
-    if that message is part of a thread, the entire conversation is trashed—matching
-    Gmail behavior and avoiding a thread that stays visible with only some messages removed.
+    Move mail to trash (recoverable ~30 days). Requires ALLOW_WRITE=true in .env.
+    First call returns a confirmation prompt; call again with confirm=true to execute.
+    If the message is part of a thread, the entire conversation is trashed.
     
     Args:
         message_id: Gmail message ID (obtained from list_emails or read_email)
+        confirm: Set to true to confirm and execute the delete
     
     Returns:
         str: JSON string with success confirmation
     
     Example:
-        - delete_email(message_id="18f2a3b4c5d6e7f8")
+        - delete_email(message_id="18f2a3b4c5d6e7f8", confirm=true)
     """
+    gate = _write_gate(confirm, "delete_email", f"About to trash thread for message {message_id} (recoverable ~30 days). Call again with confirm=true to proceed.")
+    if gate:
+        return gate
+
     try:
-        # Ensure authenticated
         if not gmail_client.service:
             if not gmail_client.authenticate():
                 return json.dumps({
                     "error": "Authentication failed. Please run: python authenticate.py"
                 })
         
-        # Delete email (move to trash)
         result = gmail_client.delete_email(message_id)
         
         if not result:
@@ -632,6 +668,8 @@ def delete_email(message_id: str) -> str:
 
 # Start MCP server with SSE transport
 if __name__ == "__main__":
+    mode = "READ-WRITE" if ALLOW_WRITE else "READ-ONLY"
     print(f"Starting {SERVER_NAME} on port {SSE_PORT}...")
+    print(f"Mode: {mode}")
     print(f"Connect to: http://localhost:{SSE_PORT}/sse")
     mcp.run(transport="sse")

@@ -46,6 +46,10 @@ python sse_server.py
 - Logging for debugging
 - User-friendly error messages
 
+## Disclaimer
+
+This project is provided as-is for personal and educational use. Email operations (sending, deleting, archiving) are irreversible or difficult to undo. The author is not responsible for any unintended emails sent, data loss, or other consequences. The server starts in **read-only mode** by default — write operations must be explicitly enabled. Always test with a non-critical email account first.
+
 ## Prerequisites
 
 - **Python 3.8+** (tested with Python 3.12)
@@ -215,6 +219,8 @@ search_emails(
 
 ### ✉️ Email Sending
 
+> All write tools require `ALLOW_WRITE=true` in `.env` and a two-step confirmation (see [Configuration](#configuration)).
+
 #### `send_email`
 Send a new email.
 
@@ -223,13 +229,13 @@ send_email(
     to: str,                  # Recipient email
     subject: str,             # Email subject
     body: str,                # Email body
-    is_html: bool = False     # HTML format
+    is_html: bool = False,    # HTML format
+    confirm: bool = False     # Must be true to execute
 )
 ```
 
 **Examples:**
-- `send_email(to="friend@example.com", subject="Hello", body="Hi there!")`
-- `send_email(to="colleague@work.com", subject="Report", body="<h1>Q4 Report</h1>", is_html=True)`
+- `send_email(to="friend@example.com", subject="Hello", body="Hi there!", confirm=true)`
 
 #### `reply_to_email`
 Reply to an existing email with proper threading.
@@ -238,12 +244,13 @@ Reply to an existing email with proper threading.
 reply_to_email(
     message_id: str,          # ID of email to reply to
     body: str,                # Reply content
-    is_html: bool = False
+    is_html: bool = False,
+    confirm: bool = False     # Must be true to execute
 )
 ```
 
 **Example:**
-- `reply_to_email(message_id="18f2a3b4c5d6e7f8", body="Thanks for the update!")`
+- `reply_to_email(message_id="18f2a3b4c5d6e7f8", body="Thanks!", confirm=true)`
 
 ### 🗂️ Email Management
 
@@ -251,28 +258,28 @@ reply_to_email(
 Mark an email as read.
 
 ```python
-mark_email_read(message_id: str)
+mark_email_read(message_id: str, confirm: bool = False)
 ```
 
 #### `mark_email_unread`
 Mark an email as unread.
 
 ```python
-mark_email_unread(message_id: str)
+mark_email_unread(message_id: str, confirm: bool = False)
 ```
 
 #### `archive_email`
 Archive an email thread (removes the entire conversation from inbox, keeps in All Mail).
 
 ```python
-archive_email(message_id: str)
+archive_email(message_id: str, confirm: bool = False)
 ```
 
 #### `delete_email`
 Trash an email thread (moves the entire conversation to trash, recoverable for ~30 days).
 
 ```python
-delete_email(message_id: str)
+delete_email(message_id: str, confirm: bool = False)
 ```
 
 ### 📰 Newsletter Aggregation
@@ -338,10 +345,16 @@ OAUTH_PORT=8080                    # Port for OAuth callback
 # MCP Server Settings
 SSE_PORT=5553                      # MCP server port
 
+# Write mode — server is read-only by default
+# Set to true to enable send, reply, delete, archive, and mark read/unread
+ALLOW_WRITE=false
+
 # Anthropic API (for client testing)
 ANTHROPIC_API_KEY=your_key_here
 ANTHROPIC_MODEL_NAME=claude-sonnet-4-5-20250929
 ```
+
+**Write mode:** When `ALLOW_WRITE=true`, write tools still require a two-step confirmation. The first call returns a warning describing the action; calling again with `confirm=true` executes it. This prevents LLMs from accidentally firing off emails or deletes in a single turn.
 
 ### Gmail API Scopes
 
