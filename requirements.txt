@@ -16,6 +16,7 @@ beautifulsoup4==4.14.2
 anthropic==0.42.0
 
 # Server dependencies
+fastapi==0.115.12
 uvicorn==0.34.0
 starlette==0.45.2
 sse-starlette==2.2.1
