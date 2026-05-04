@@ -276,7 +276,8 @@ def format_email_summary(message: Dict[str, Any]) -> Dict[str, Any]:
         'subject': headers.get('subject', '(No Subject)'),
         'from': headers.get('from', ''),
         'date': headers.get('date', ''),
-        'snippet': message.get('snippet', '')
+        'snippet': message.get('snippet', ''),
+        'labels': message.get('labelIds', []),
     }
 
 
