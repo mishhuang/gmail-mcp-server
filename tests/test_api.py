@@ -88,3 +88,30 @@ def test_list_newsletters(client, mock_client_module):
     data = response.json()
     assert "emails" in data
     assert data["total"] == 1
+
+
+def test_digest_no_newsletters(client, mock_client_module):
+    """Returns 404 when no newsletters found in time range."""
+    with patch("api_server.fetch_newsletters_func") as mock_fetch:
+        mock_fetch.return_value = {
+            "total_emails": 0,
+            "newsletters_by_sender": {},
+            "date_range": "2026-04-30 to 2026-05-01",
+            "hours_back": 24,
+        }
+        response = client.post("/newsletters/digest", json={"hours_back": 24})
+    assert response.status_code == 404
+
+
+def test_digest_missing_api_key(client, mock_client_module):
+    """Returns 503 when ANTHROPIC_API_KEY is not set."""
+    with patch("api_server.fetch_newsletters_func") as mock_fetch:
+        mock_fetch.return_value = {
+            "total_emails": 1,
+            "newsletters_by_sender": {"a@b.com": [{"subject": "S", "content": "C", "date": "D", "id": "1"}]},
+            "date_range": "2026-04-30 to 2026-05-01",
+            "hours_back": 24,
+        }
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": ""}):
+            response = client.post("/newsletters/digest", json={"hours_back": 24})
+    assert response.status_code == 503

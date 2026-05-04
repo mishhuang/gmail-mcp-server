@@ -1,9 +1,14 @@
 """FastAPI REST server exposing Gmail operations for the frontend."""
 
 import os
+import json
 import logging
+from typing import Optional, List
+import anthropic
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from src.gmail_client import GmailClient
@@ -79,6 +84,73 @@ async def list_newsletters(
     query = f"({sender_query}) after:{date_filter}"
     summaries = gc.get_email_summaries(query=query, max_results=50)
     return {"emails": summaries, "total": len(summaries)}
+
+
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL_NAME", "claude-sonnet-4-6")
+
+DIGEST_SYSTEM_PROMPT = """You are synthesizing AI/tech newsletter content into a single unified digest.
+Organize by topic. Use ## for topic headings and ### for sub-points.
+Include ALL unique information and perspectives from all newsletters.
+Merge overlapping stories into one entry, preserving distinct viewpoints and details.
+Eliminate pure repetition. Write as a single coherent article, not a list of summaries."""
+
+
+class DigestRequest(BaseModel):
+    hours_back: int = 24
+    senders: Optional[List[str]] = None
+
+
+@app.post("/newsletters/digest")
+async def newsletter_digest(
+    request: DigestRequest,
+    gc: GmailClient = Depends(get_gmail_client),
+):
+    newsletters = fetch_newsletters_func(
+        service=gc.service,
+        hours_back=request.hours_back,
+        senders=request.senders,
+    )
+
+    if newsletters["total_emails"] == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No newsletters found in the past {request.hours_back} hours."
+        )
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not set in .env")
+
+    parts = []
+    for sender_email, emails in newsletters["newsletters_by_sender"].items():
+        for email in emails:
+            parts.append(f"### {email['subject']}\n\n{email['content']}")
+
+    combined = "\n\n---\n\n".join(parts)
+
+    def generate():
+        anthropic_client = anthropic.Anthropic(api_key=api_key)
+        with anthropic_client.messages.stream(
+            model=ANTHROPIC_MODEL,
+            max_tokens=4096,
+            system=DIGEST_SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Here are the newsletters from the past {request.hours_back} hours:\n\n"
+                    f"{combined}\n\nWrite the unified digest now."
+                ),
+            }],
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 if __name__ == "__main__":
