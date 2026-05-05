@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+from src.config import ALLOW_WRITE
 from src.gmail_client import GmailClient
 from src.newsletter import (
     fetch_newsletters as fetch_newsletters_func,
@@ -151,6 +152,50 @@ async def newsletter_digest(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _write_check():
+    if not ALLOW_WRITE:
+        raise HTTPException(
+            status_code=403,
+            detail="Write operations are disabled. Set ALLOW_WRITE=true in .env to enable."
+        )
+
+
+@app.put("/emails/{message_id}/read")
+async def mark_read(message_id: str, gc: GmailClient = Depends(get_gmail_client)):
+    _write_check()
+    result = gc.mark_as_read(message_id)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Failed to mark email as read")
+    return {"success": True}
+
+
+@app.put("/emails/{message_id}/unread")
+async def mark_unread(message_id: str, gc: GmailClient = Depends(get_gmail_client)):
+    _write_check()
+    result = gc.mark_as_unread(message_id)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Failed to mark email as unread")
+    return {"success": True}
+
+
+@app.post("/emails/{message_id}/archive")
+async def archive_email(message_id: str, gc: GmailClient = Depends(get_gmail_client)):
+    _write_check()
+    result = gc.archive_email(message_id)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Failed to archive email")
+    return {"success": True}
+
+
+@app.post("/emails/{message_id}/delete")
+async def delete_email(message_id: str, gc: GmailClient = Depends(get_gmail_client)):
+    _write_check()
+    result = gc.delete_email(message_id)
+    if result is None:
+        raise HTTPException(status_code=500, detail="Failed to delete email")
+    return {"success": True}
 
 
 if __name__ == "__main__":

@@ -115,3 +115,41 @@ def test_digest_missing_api_key(client, mock_client_module):
         with patch.dict("os.environ", {"ANTHROPIC_API_KEY": ""}):
             response = client.post("/newsletters/digest", json={"hours_back": 24})
     assert response.status_code == 503
+
+
+def test_write_endpoints_blocked_when_disabled(client, mock_client_module):
+    """All write endpoints return 403 when ALLOW_WRITE is false."""
+    with patch("api_server.ALLOW_WRITE", False):
+        assert client.put("/emails/abc/read").status_code == 403
+        assert client.put("/emails/abc/unread").status_code == 403
+        assert client.post("/emails/abc/archive").status_code == 403
+        assert client.post("/emails/abc/delete").status_code == 403
+
+
+def test_mark_read(client, mock_client_module):
+    mock_client_module.mark_as_read.return_value = {"id": "abc"}
+    with patch("api_server.ALLOW_WRITE", True):
+        response = client.put("/emails/abc/read")
+    assert response.status_code == 200
+    assert response.json() == {"success": True}
+
+
+def test_mark_unread(client, mock_client_module):
+    mock_client_module.mark_as_unread.return_value = {"id": "abc"}
+    with patch("api_server.ALLOW_WRITE", True):
+        response = client.put("/emails/abc/unread")
+    assert response.status_code == 200
+
+
+def test_archive(client, mock_client_module):
+    mock_client_module.archive_email.return_value = {"id": "abc"}
+    with patch("api_server.ALLOW_WRITE", True):
+        response = client.post("/emails/abc/archive")
+    assert response.status_code == 200
+
+
+def test_delete(client, mock_client_module):
+    mock_client_module.delete_email.return_value = {"id": "abc"}
+    with patch("api_server.ALLOW_WRITE", True):
+        response = client.post("/emails/abc/delete")
+    assert response.status_code == 200
