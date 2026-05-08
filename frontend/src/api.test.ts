@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { listEmails, readEmail, listNewsletters, markRead, ApiError } from './api'
+import { listEmails, readEmail, markRead, ApiError } from './api'
 
 const mockFetch = vi.fn()
-global.fetch = mockFetch
 
 beforeEach(() => {
+  vi.stubGlobal('fetch', mockFetch)
   mockFetch.mockReset()
 })
 
