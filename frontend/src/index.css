@@ -105,6 +105,12 @@ button {
   border-radius: 4px;
 }
 
+/* ── Email row interactions ── */
+.email-row:hover .row-actions { display: flex !important; }
+.email-row:hover { background: var(--bg-hover) !important; }
+.email-row[data-selected="true"] { background: var(--accent-light) !important; }
+.email-row[data-selected="true"]:hover { background: var(--accent-light) !important; }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
