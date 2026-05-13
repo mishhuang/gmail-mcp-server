@@ -14,6 +14,7 @@ interface Props {
   hoursBack: number
   onShowDigest: () => void
   showDigest: boolean
+  digestGenerating?: boolean
 }
 
 function SkeletonRow() {
@@ -29,7 +30,7 @@ function SkeletonRow() {
   )
 }
 
-export default function EmailListPane({ view, selectedId, onSelect, writeMode, hoursBack, onShowDigest, showDigest }: Props) {
+export default function EmailListPane({ view, selectedId, onSelect, writeMode, hoursBack, onShowDigest, showDigest, digestGenerating }: Props) {
   const { emails, loading, error, reload } = useEmails(view, hoursBack)
   const [query, setQuery] = useState('')
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -70,7 +71,7 @@ export default function EmailListPane({ view, selectedId, onSelect, writeMode, h
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {view === 'newsletters' && (
         <div style={{ padding: '12px', borderBottom: '1px solid var(--border)' }}>
-          <DigestButton onGenerate={onShowDigest} active={showDigest} />
+          <DigestButton onGenerate={onShowDigest} active={showDigest} generating={digestGenerating} />
         </div>
       )}
 

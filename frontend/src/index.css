@@ -111,6 +111,16 @@ button {
 .email-row[data-selected="true"] { background: var(--accent-light) !important; }
 .email-row[data-selected="true"]:hover { background: var(--accent-light) !important; }
 
+/* ── Digest button pulse ── */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 111, 165, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(74, 111, 165, 0); }
+}
+
+.digest-btn-generating {
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -10,9 +10,10 @@ interface Props {
   hoursBack: number
   onDeleted: () => void
   onArchived: () => void
+  onDigestDone?: () => void
 }
 
-export default function ReaderPane({ selectedId, showDigest, writeMode, hoursBack, onDeleted, onArchived }: Props) {
+export default function ReaderPane({ selectedId, showDigest, writeMode, hoursBack, onDeleted, onArchived, onDigestDone }: Props) {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   function showToast(message: string, type: 'success' | 'error') {
@@ -23,7 +24,7 @@ export default function ReaderPane({ selectedId, showDigest, writeMode, hoursBac
   return (
     <div style={{ height: '100%', position: 'relative' }}>
       {showDigest ? (
-        <DigestView hoursBack={hoursBack} />
+        <DigestView hoursBack={hoursBack} onDone={onDigestDone} />
       ) : selectedId ? (
         <EmailView
           messageId={selectedId}

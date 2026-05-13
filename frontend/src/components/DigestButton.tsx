@@ -1,8 +1,15 @@
-interface Props { onGenerate: () => void; active: boolean }
-export default function DigestButton({ onGenerate, active }: Props) {
+interface Props {
+  onGenerate: () => void
+  active: boolean
+  generating?: boolean
+}
+
+export default function DigestButton({ onGenerate, active, generating }: Props) {
   return (
     <button
       onClick={onGenerate}
+      disabled={generating}
+      className={generating ? 'digest-btn-generating' : ''}
       style={{
         width: '100%',
         padding: '9px 12px',
@@ -13,9 +20,11 @@ export default function DigestButton({ onGenerate, active }: Props) {
         border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
         borderRadius: '6px',
         transition: 'all 0.15s',
+        cursor: generating ? 'default' : 'pointer',
+        opacity: generating ? 0.8 : 1,
       }}
     >
-      ✨ Generate Digest
+      {generating ? '⏳ Generating…' : '✨ Generate Digest'}
     </button>
   )
 }

@@ -20,6 +20,7 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme)
   const [writeMode, setWriteMode] = useState(getInitialWriteMode)
   const [hoursBack, setHoursBack] = useState(24)
+  const [digestGenerating, setDigestGenerating] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -62,8 +63,9 @@ export default function App() {
           onSelect={handleSelectEmail}
           writeMode={writeMode}
           hoursBack={hoursBack}
-          onShowDigest={() => setShowDigest(true)}
+          onShowDigest={() => { setShowDigest(true); setDigestGenerating(true) }}
           showDigest={showDigest}
+          digestGenerating={digestGenerating}
         />
       }
       reader={
@@ -74,6 +76,7 @@ export default function App() {
           hoursBack={hoursBack}
           onDeleted={() => setSelectedId(null)}
           onArchived={() => setSelectedId(null)}
+          onDigestDone={() => setDigestGenerating(false)}
         />
       }
     />
