@@ -9,7 +9,7 @@ interface UseEmailsResult {
   reload: () => void
 }
 
-export function useEmails(view: View, hoursBack: number): UseEmailsResult {
+export function useEmails(view: View, hoursBack: number, onAuthError?: () => void): UseEmailsResult {
   const [emails, setEmails] = useState<EmailSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +28,7 @@ export function useEmails(view: View, hoursBack: number): UseEmailsResult {
       .then(data => { if (!cancelled) { setEmails(data); setLoading(false) } })
       .catch(err => {
         if (cancelled) return
+        if (err instanceof ApiError && err.status === 503) onAuthError?.()
         setError(err instanceof ApiError ? err.detail : 'Failed to load emails')
         setLoading(false)
       })

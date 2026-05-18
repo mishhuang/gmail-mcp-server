@@ -15,6 +15,7 @@ interface Props {
   onShowDigest: () => void
   showDigest: boolean
   digestGenerating?: boolean
+  onAuthError?: () => void
 }
 
 function SkeletonRow() {
@@ -30,8 +31,8 @@ function SkeletonRow() {
   )
 }
 
-export default function EmailListPane({ view, selectedId, onSelect, writeMode, hoursBack, onShowDigest, showDigest, digestGenerating }: Props) {
-  const { emails, loading, error, reload } = useEmails(view, hoursBack)
+export default function EmailListPane({ view, selectedId, onSelect, writeMode, hoursBack, onShowDigest, showDigest, digestGenerating, onAuthError }: Props) {
+  const { emails, loading, error, reload } = useEmails(view, hoursBack, onAuthError)
   const [query, setQuery] = useState('')
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
